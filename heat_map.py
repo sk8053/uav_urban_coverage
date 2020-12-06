@@ -173,7 +173,7 @@ class Heat_Map(object):
         yy = yy.reshape (-1,)
         SNR_matrix = []
         link_state_matrix = []
-        for dx, dy in tqdm(zip (xx,yy)):
+        for dx, dy in tqdm(zip (xx,yy), total= len(xx), desc='total number of bins'):
             if plane_type == 'xz':
                 SNR, link_state = self.get_snr_from_one_point(tilt_angle, dx, plane_shift, dy)
             elif plane_type == 'yz':
