@@ -158,6 +158,10 @@ class Heat_Map(object):
                 plt.title(title_)
                 plt.savefig(file_name + '.png')
         else:
+            if bs_type == "Terrestrial":
+                print('Obtained data from UAVs for terrestrial BS')
+            else:
+                print('Obtained data from UAVs for aerial BS')
             return SNR_matrix, link_state_matrix
 
 
@@ -229,11 +233,11 @@ class Heat_Map(object):
         return snr_, link_state[ind]
 
     def get_association(self,aerial_height=30, annot = True, tilt_angel_t = -12, tilt_angle_a= 45, plane_shift = 30):
-        print ('Get data from UAVs for terrestrial BS')
+        #print ('Get data from UAVs for terrestrial BS')
         self.plane_shift = plane_shift
         SNR_matrix_t, link_state_t = self.plot_heat_map(bs_type="Terrestrial", tilt_angle= tilt_angel_t,
                                                         plane_type='xy', nsect=3, cdf_prob=0.5, disable_plot=True)
-        print ('Get data from UAVs for aerial BS')
+        #print ('Get data from UAVs for aerial BS')
         self.plane_shift-= aerial_height # change the plane shift value for computing height of aerial BSs
         SNR_matrix_a, link_state_a = self.plot_heat_map(bs_type="Aerial", tilt_angle=tilt_angle_a, plane_type='xy',
                                                         nsect=3, cdf_prob=0.5, disable_plot=True)
