@@ -13,8 +13,9 @@ from tqdm import tqdm
 import pickle
 import numpy as np
 import zipfile
-
-from mmwchanmod.learn.models import ChanMod
+import sys
+sys.path.append ('/home/sk8053/mmwchanmod2/mmwchanmod/')
+from  mmwchanmod.learn.models import ChanMod
 
 def download_file_from_gdrive(gdrive_id, destination):
     URL = "https://docs.google.com/uc?export=download"

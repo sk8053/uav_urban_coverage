@@ -53,13 +53,13 @@ fc = 28e9  # carrier frequency in Hz
 nant_gnb = np.array([8,8])  # gNB array size
 nant_ue = np.array([4,4])   # UE/UAV array size
 nsect_t = 3  # number of sectors for terrestrial gNBs
-nsect_a = 1  # number of sectors for aerial gNBs.  Set to 1 or 3
+nsect_a = 3  # number of sectors for aerial gNBs.  Set to 1 or 3
 
 # uptilt on the aerial gNBs
 if nsect_a == 1:
-    uptilt_a = 90    
+    uptilt_a = 45
 else:
-    uptilt_a = 45    
+    uptilt_a =90
     
 # Number of x and z bins
 nx = 40
@@ -74,7 +74,7 @@ Create the arrays
 """
 # Terrestrial gNB.
 # We downtilt the array and then replicate it over three sectors
-elem_gnb = Elem3GPP(thetabw=82, phibw=82)
+elem_gnb = Elem3GPP(thetabw=82, phibw=82, theta0=90- uptilt_a)
 arr_gnb0 = URA(elem=elem_gnb, nant=nant_gnb, fc=fc)
 arr_gnb1 = RotatedArray(arr_gnb0,theta0=-downtilt_t)
 
@@ -87,11 +87,11 @@ arr_gnb_a = RotatedArray(arr_gnb0,theta0=uptilt_a)
 
 # For multi-sector, create a list of arrays
 if (nsect_a > 1):
-    arr_gnb_list_a = multi_sect_array(\
+    arr_gnb_list_a = multi_sect_array(
         arr_gnb_a, sect_type='azimuth', nsect=nsect_a)
 
 # UE array.  Array is pointing down.
-elem_ue = Elem3GPP(thetabw=82, phibw=82)
+elem_ue = Elem3GPP(thetabw=82, phibw=82, theta0=180)
 arr_ue0 = URA(elem=elem_ue, nant=nant_ue, fc=fc)
 arr_ue = RotatedArray(arr_ue0,theta0=-90)
 
@@ -121,7 +121,8 @@ for iplot, rx_type0 in enumerate(rx_types):
     # Print cell type
     print('')
     print('Simulating RX type: %s' % rx_type0)
-    
+
+
     # Set the limits and x and z values to test
     dx = np.linspace(xlim[0],xlim[1],nx)        
     dz = np.linspace(zlim[0],zlim[1],nz)
@@ -131,13 +132,15 @@ for iplot, rx_type0 in enumerate(rx_types):
     
     # Convert to meshgrid
     dxmat, dzmat = np.meshgrid(dx,dz)
-    
+
     # Create the condition 
     ns = nx*nz
     phi = np.random.uniform(0,2*np.pi,ns)
     dx = dxmat.ravel()
     dz = dzmat.ravel()
+
     dvec = np.column_stack((dx*np.cos(phi), dx*np.sin(phi), dz))
+
     rx_type_vec = np.tile(iplot, (ns,))
         
         
@@ -181,7 +184,7 @@ for iplot, rx_type0 in enumerate(rx_types):
     plt.imshow(snr_med[:,:,iplot],\
                extent=[np.min(xlim),np.max(xlim),np.min(zlim),np.max(zlim)],\
                aspect='auto', vmin=-20, vmax=60)   
-        
+
     # Add horizontal line indicating location of aerial cell
     if (rx_type0 == 'Aerial'):
         plt.plot(xlim, np.array([1,1])*aer_height, 'r--')

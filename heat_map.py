@@ -1,4 +1,4 @@
-import numpy as np
+
 import matplotlib.pyplot as plt
 import os
 import sys
@@ -17,7 +17,7 @@ from mmwchanmod.sim.antenna import Elem3GPP
 from mmwchanmod.sim.array import URA, RotatedArray, multi_sect_array
 from mmwchanmod.sim.chanmod import dir_path_loss, dir_path_loss_multi_sect
 
-import seaborn as heat_map
+import seaborn as h_map
 import numpy as np
 
 class Heat_Map(object):
@@ -25,10 +25,10 @@ class Heat_Map(object):
     def __init__(self, mod_name='uav_beijing', bs_type = 'Terrestrial',  npts=100
                 , nsect = 3, cdf_prob = 0.5, net_work_area_hori = np.linspace(0, 100, 20),
                 net_work_area_verti = np.linspace(1, 150,20), cmap_name = 'plasma',
-                 plan_type = 'xz', plan_shift = 0):
+                 plane_type = 'xz', plane_shift = 0):
         """
         This class plots a heat map showing strength of SNR values using color bar
-        We can observe how SNR values change in different plans (x-y, y-z, x-z)
+        We can observe how SNR values change in different planes (x-y, y-z, x-z)
         for terrestrial and aerial BSs changing antenna configurations: number of sectors and tilted angle
 
         Parameters
@@ -38,11 +38,11 @@ class Heat_Map(object):
         npts: number of random channels generated at one point
         nsect: number of sectors for antenna array
         cdf_prob: the probability to take SNR value from its CDF
-        net_work_area_hori: horizontal values consisting of network area ( observation plan)
-        net_work_area_verti: vertical values consisting of network area (observation plan)
+        net_work_area_hori: horizontal values consisting of network area ( observation plane)
+        net_work_area_verti: vertical values consisting of network area (observation plane)
         cmap_name: types of color bar: https://matplotlib.org/3.3.3/tutorials/colors/colormaps.html
-        plan_type: types of plan where we can observe data
-        plan_shift: value for shifting observation plan
+        plane_type: types of plane where we can observe data
+        plan_shift: value for shifting observation plane
         """
 
         # Paramters
@@ -53,8 +53,8 @@ class Heat_Map(object):
         self.net_work_area_hori = net_work_area_hori
         self.net_work_area_verti = net_work_area_verti
         self.cmap_name = cmap_name
-        self.plan_type = plan_type
-        self.plan_shift = plan_shift # value for shifting plane
+        self.plane_type = plane_type
+        self.plane_shift = plane_shift # value for shifting plane
         fc = 28e9  # carrier frequency in Hz
         nant_gnb = np.array([8, 8])  # gNB array size
         nant_ue = np.array([4, 4])  # UE/UAV array size
@@ -80,14 +80,22 @@ class Heat_Map(object):
         self.nsect = nsect
         self.cdf_prob = cdf_prob
 
-    def plot_heat_map(self, bs_type = 'Terrestrial', tilt_angle = 90, nsect = 3, cdf_prob = 0.5):
+        self.vmin = -10
+        self.vmax = 60
+
+    def plot_heat_map(self, bs_type = 'Terrestrial', tilt_angle = 45, nsect = 3, cdf_prob = 0.5, annot= False
+                      , get_link_state = False, plane_type = 'xz', disable_plot = False):
         """
         this function plot the heat map using a SNR matrix
         Parameters
         ----------
         bs_type : Either Terrestrial or Aerial
         tilt_angle: tilted angles of antenna array
-
+        nsect: number sectors for BSs
+        cdf_prob: probability to take SNR value from its CDF
+        annot: if Ture, write data values in each cell of heatmap
+        get_link_state: if True, we will see link state heat map with values or symbols in each cell
+        disable_plot: if True, we only get data and don't plot heatmap
         Returns
         -------
 
@@ -99,29 +107,63 @@ class Heat_Map(object):
         self.nsect = nsect
         # update probability of cdf from which we want to observe SNR values
         self.cdf_prob = cdf_prob
+        # update plane type
+        self.plane_type = plane_type
 
         cmap = plt.get_cmap(self.cmap_name)
         x = self.net_work_area_hori
         y = self.net_work_area_verti
         SNR_matrix, link_state_matrix = \
-            self.get_snr_from_plane(x, y, tilt_angle= tilt_angle, plan_type=self.plan_type, plan_shift=self.plan_shift)
+            self.get_snr_from_plane(x, y, tilt_angle= tilt_angle, plane_type=self.plane_type, plane_shift=self.plane_shift)
         SNR_matrix = np.flipud(SNR_matrix.T)
 
-        heat_map.heatmap(SNR_matrix, cmap=cmap, xticklabels=np.round(x, 2), yticklabels=np.flip(np.round(y, 2)))
+        if disable_plot is not True:
+            h_map.heatmap(SNR_matrix, cmap=cmap, xticklabels=np.round(x, 2), yticklabels=np.flip(np.round(y, 2)),
+                            annot = annot, cbar = not annot)
 
-        plt.xlabel("distance along X axis (m)")
-        plt.ylabel("distance along Z axis (m)")
+            plt.xlabel("distance along "+ list(plane_type)[0]+ " axis (m)")
+            plt.ylabel("distance along "+ list(plane_type)[1]+ " axis (m)")
 
-        if self.chan_mod.rx_types[self.cell_type[0]] == 'Terrestrial':
-            title_ = 'Terrestrial BS case and terrestrial angle is ' + str(tilt_angle)
+            if self.chan_mod.rx_types[self.cell_type[0]] == 'Terrestrial':
+                title_ = 'Terrestrial BS case and tilted angle is ' + str(tilt_angle)
+                file_name = 'SNR of terrestrial BS HeatMap '+ str(tilt_angle) + ' n_sector = ' + str(nsect)
+            else:
+                title_ = 'Aerial BS case and tilted angle is ' + str(tilt_angle)
+                file_name = 'SNR of aerial BS HeatMap ' + str(tilt_angle) + ' n_sector = ' + str(nsect)
+
+            plt.title(title_)
+            plt.savefig (file_name+'.png')
+
+            if get_link_state is True:
+                plt.figure (2)
+                link_state_matrix = np.flipud(link_state_matrix.T)
+                annot_ = np.empty_like(link_state_matrix)
+                annot_ = np.array (annot_, dtype = object)
+                annot_[link_state_matrix == 1] = 'L'
+                annot_[link_state_matrix == 2] = 'N'
+                annot_[link_state_matrix == 0] = 'O'
+
+                h_map.heatmap(link_state_matrix, cmap=cmap, xticklabels=np.round(x, 2), yticklabels=np.flip(np.round(y, 2)),
+                             annot= annot_, cbar =False, fmt = '')
+                plt.xlabel("distance along " + list(plane_type)[0] + " axis (m)")
+                plt.ylabel("distance along " + list(plane_type)[1] + " axis (m)")
+
+                if self.chan_mod.rx_types[self.cell_type[0]] == 'Terrestrial':
+                    title_ = 'Link state of terrestrial BS case and tilted angle is ' + str(tilt_angle)
+                    file_name = 'link_state_terrestrial BS heatmap ' + str(tilt_angle) + ' n_sector = ' + str(nsect)
+                else:
+                    title_ = 'Link state of aerial BS case and tilted angle is ' + str(tilt_angle)
+                    file_name = 'link_state_aerial BS heatmap ' + str(tilt_angle) + ' n_sector = ' + str(nsect)
+
+                plt.title(title_)
+                plt.savefig(file_name + '.png')
         else:
-            title_ = 'Aerial BS case and terrestrial angle is ' + str(tilt_angle)
-        plt.title(title_)
-        plt.savefig ('heat_map.png')
+            return SNR_matrix, link_state_matrix
 
-    def get_snr_from_plane(self, x, y, tilt_angle=45,plan_type = 'xz', plan_shift = 0):
+
+    def get_snr_from_plane(self, x, y, tilt_angle=45,plane_type = 'xz', plane_shift = 0):
         """
-        This function will return SNR and link state matrix observed from the given plan
+        This function will return SNR and link state matrix observed from the given plane
         """
         # x : horizontal values
         # y : vertial values
@@ -133,12 +175,12 @@ class Heat_Map(object):
         for dx in tqdm(x,position=0, leave=True, desc= 'horizontal axis'):
             j = 0
             for dy in tqdm(y, position=0, leave=True, desc = 'vertical axis'):
-                if plan_type == 'xz':
-                    SNR, link_state = self.get_snr_from_one_point(tilt_angle, dx, plan_shift, dy)
-                elif plan_type == 'yz':
-                    SNR, link_state = self.get_snr_from_one_point(tilt_angle,plan_shift, dx,  dy)
-                elif plan_type == 'xy':
-                    SNR, link_state = self.get_snr_from_one_point(tilt_angle, dx, dy, plan_shift)
+                if plane_type == 'xz':
+                    SNR, link_state = self.get_snr_from_one_point(tilt_angle, dx, plane_shift, dy)
+                elif plane_type == 'yz':
+                    SNR, link_state = self.get_snr_from_one_point(tilt_angle,plane_shift, dx,  dy)
+                elif plane_type == 'xy':
+                    SNR, link_state = self.get_snr_from_one_point(tilt_angle, dx, dy, plane_shift)
                 SNR_matrix[i][j] = SNR
                 link_state_matrix[i][j] = link_state
                 j += 1
@@ -179,18 +221,67 @@ class Heat_Map(object):
             # Compute the  SNR
             snri = self.tx_pow - pl_gain - self.kT - self.nf - 10 * np.log10(self.bw)
             snr[i] = snri
-        snr = np.sort(snr)
-        if self.cdf_prob == 0.5:
-            snr = np.median(snr)
-        else:
-            snr = snr[int(npts*self.cdf_prob)]
-        return snr, link_state[0]
+
+        snr_ = np.sort(snr)
+
+        snr_ = snr_[int(npts*self.cdf_prob)]
+        ind = np.where(snr_ == snr)
+
+        return snr_, link_state[ind]
+
+    def get_association(self,aerial_height=30, annot = True, tilt_angel_t = -12, tilt_angle_a= 45, plane_shift = 30):
+        print ('Get data from UAVs for terrestrial BS')
+        self.plane_shift = plane_shift
+        SNR_matrix_t, link_state_t = self.plot_heat_map(bs_type="Terrestrial", tilt_angle= tilt_angel_t,
+                                                        plane_type='xy', nsect=3, cdf_prob=0.5, disable_plot=True)
+        print ('Get data from UAVs for aerial BS')
+        self.plane_shift-= aerial_height # change the plane shift value for computing height of aerial BSs
+        SNR_matrix_a, link_state_a = self.plot_heat_map(bs_type="Aerial", tilt_angle=tilt_angle_a, plane_type='xy',
+                                                        nsect=3, cdf_prob=0.5, disable_plot=True)
+        maximum_SNR = np.maximum(SNR_matrix_a, SNR_matrix_t)
+        associatioin_matrix = np.array((maximum_SNR==SNR_matrix_a), dtype= int)
+        x = self.net_work_area_hori
+        y = self.net_work_area_verti
+
+        annot_ = np.empty_like(associatioin_matrix)
+        annot_ = np.array (annot_, dtype= object)
+        annot_[associatioin_matrix == 1] = 'a'
+        annot_[associatioin_matrix == 0] = 't'
+
+        plt.figure(1)
+        h_map.heatmap(associatioin_matrix, cmap=self.cmap_name, xticklabels=np.round(x, 2), yticklabels=np.flip(np.round(y, 2)),
+                         annot=annot_, cbar=not annot, fmt = '')
+        plt.xlabel("distance along " + list(self.plane_type)[0] + " axis (m)")
+        plt.ylabel("distance along " + list(self.plane_type)[1] + " axis (m)")
+        plt.title ('UAVs in bins after selecting either terrestrial or aerial BS')
+
+        plt.figure (2)
+        h_map.heatmap(SNR_matrix_a, cmap=self.cmap_name, xticklabels=np.round(x, 2),
+                      yticklabels=np.flip(np.round(y, 2)),
+                      annot=annot, cbar=not annot)
+        plt.xlabel("distance along " + list(self.plane_type)[0] + " axis (m)")
+        plt.ylabel("distance along " + list(self.plane_type)[1] + " axis (m)")
+        plt.title('UAVs in bins associated with only aerial BS')
+
+        plt.figure(3)
+        h_map.heatmap(SNR_matrix_t, cmap=self.cmap_name, xticklabels=np.round(x, 2),
+                      yticklabels=np.flip(np.round(y, 2)),
+                      annot=annot, cbar=not annot)
+        plt.xlabel("distance along " + list(self.plane_type)[0] + " axis (m)")
+        plt.ylabel("distance along " + list(self.plane_type)[1] + " axis (m)")
+        plt.title('UAVs in bins associated with only terrestrial BS')
 
 '''
 f = Heat_Map(mod_name='uav_beijing', bs_type = 'Aerial',
              npts=100, nsect = 3, cdf_prob = 0.5,
-             net_work_area_hori = np.linspace(-50, 50, 10),
-             net_work_area_verti = np.linspace(-50, 50,10), plan_type='xy', plan_shift=120)
-f.plot_heat_map(bs_type="Aerial", tilt_angle= 90)
+             net_work_area_hori = np.linspace(-100, 100, 10),
+             net_work_area_verti = np.linspace(-100, 100,10),  plane_shift=200)
+#f.net_work_area_verti = np.linspace (30, 150, 10)
+#f.net_work_area_hori = np.linspace(0, 100, 10)
+#f.plane_shift = 0
+#f.plot_heat_map(bs_type="Aerial", tilt_angle= 45, get_link_state= True,
+      #          annot= True, plane_type='xy', nsect=3, cdf_prob=0.3)
+
+f.get_association(aerial_height=10, tilt_angel_t=-22, tilt_angle_a=45)
 plt.show()
 '''

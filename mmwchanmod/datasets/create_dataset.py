@@ -1,6 +1,8 @@
 """
 create_dataset.py:  Creates train and test dataset for the channel modeling
 """
+import sys
+sys.path.append ('/home/sk8053/mmwchanmod2/mmwchanmod/')
 import pandas as pd
 import os
 import numpy as np
