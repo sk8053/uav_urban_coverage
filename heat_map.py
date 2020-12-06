@@ -115,7 +115,7 @@ class Heat_Map(object):
         y = self.net_work_area_verti
         SNR_matrix, link_state_matrix = \
             self.get_snr_from_plane(x, y, tilt_angle= tilt_angle, plane_type=self.plane_type, plane_shift=self.plane_shift)
-        SNR_matrix = np.flipud(SNR_matrix.T)
+        SNR_matrix = np.flipud(SNR_matrix)
 
         if disable_plot is not True:
             h_map.heatmap(SNR_matrix, cmap=cmap, xticklabels=np.round(x, 2), yticklabels=np.flip(np.round(y, 2)),
@@ -136,7 +136,7 @@ class Heat_Map(object):
 
             if get_link_state is True:
                 plt.figure (2)
-                link_state_matrix = np.flipud(link_state_matrix.T)
+                link_state_matrix = np.flipud(link_state_matrix)
                 annot_ = np.empty_like(link_state_matrix)
                 annot_ = np.array (annot_, dtype = object)
                 annot_[link_state_matrix == 1] = 'L'
@@ -168,23 +168,22 @@ class Heat_Map(object):
         # x : horizontal values
         # y : vertial values
         # plane_type:   plane where we want to see the heatmap
-        s_x, s_y = len(x), len(y)
-        SNR_matrix = np.zeros((s_x, s_y))
-        link_state_matrix = np.zeros((s_x, s_y))
-        i, j = 0,0
-        for dx in tqdm(x,position=0, leave=True, desc= 'horizontal axis'):
-            j = 0
-            for dy in tqdm(y, position=0, leave=True, desc = 'vertical axis'):
-                if plane_type == 'xz':
-                    SNR, link_state = self.get_snr_from_one_point(tilt_angle, dx, plane_shift, dy)
-                elif plane_type == 'yz':
-                    SNR, link_state = self.get_snr_from_one_point(tilt_angle,plane_shift, dx,  dy)
-                elif plane_type == 'xy':
-                    SNR, link_state = self.get_snr_from_one_point(tilt_angle, dx, dy, plane_shift)
-                SNR_matrix[i][j] = SNR
-                link_state_matrix[i][j] = link_state
-                j += 1
-            i += 1
+        xx,yy = np.meshgrid(x,y)
+        xx = xx.reshape(-1,)
+        yy = yy.reshape (-1,)
+        SNR_matrix = []
+        link_state_matrix = []
+        for dx, dy in tqdm(zip (xx,yy)):
+            if plane_type == 'xz':
+                SNR, link_state = self.get_snr_from_one_point(tilt_angle, dx, plane_shift, dy)
+            elif plane_type == 'yz':
+                SNR, link_state = self.get_snr_from_one_point(tilt_angle,plane_shift, dx,  dy)
+            elif plane_type == 'xy':
+                SNR, link_state = self.get_snr_from_one_point(tilt_angle, dx, dy, plane_shift)
+            SNR_matrix.append(SNR)
+            link_state_matrix.append(link_state)
+        SNR_matrix = np.array(SNR_matrix).reshape(len(y), len(x))
+        link_state_matrix = np.array(link_state_matrix).reshape(len(y), len(x))
 
         return SNR_matrix, link_state_matrix
 
@@ -271,17 +270,3 @@ class Heat_Map(object):
         plt.ylabel("distance along " + list(self.plane_type)[1] + " axis (m)")
         plt.title('UAVs in bins associated with only terrestrial BS')
 
-'''
-f = Heat_Map(mod_name='uav_beijing', bs_type = 'Aerial',
-             npts=100, nsect = 3, cdf_prob = 0.5,
-             net_work_area_hori = np.linspace(-100, 100, 10),
-             net_work_area_verti = np.linspace(-100, 100,10),  plane_shift=200)
-#f.net_work_area_verti = np.linspace (30, 150, 10)
-#f.net_work_area_hori = np.linspace(0, 100, 10)
-#f.plane_shift = 0
-#f.plot_heat_map(bs_type="Aerial", tilt_angle= 45, get_link_state= True,
-      #          annot= True, plane_type='xy', nsect=3, cdf_prob=0.3)
-
-f.get_association(aerial_height=10, tilt_angel_t=-22, tilt_angle_a=45)
-plt.show()
-'''
