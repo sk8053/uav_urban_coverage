@@ -112,7 +112,8 @@ class Heat_Map(object):
 
         cmap = plt.get_cmap(self.cmap_name)
         x = self.net_work_area_hori
-        if plane_type == 'xz' or plane_type == 'yz':
+        if (bs_type == 'Aerial' and plane_type == 'xz') or \
+                (bs_type == 'Aerial' and plane_type == 'yz'):
             y = self.net_work_area_verti - aerial_height
         else:
             y = self.net_work_area_verti
