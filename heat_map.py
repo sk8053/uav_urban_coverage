@@ -84,7 +84,7 @@ class Heat_Map(object):
         self.vmax = 60
 
     def plot_heat_map(self, bs_type = 'Terrestrial', tilt_angle = 45, nsect = 3, cdf_prob = 0.5, annot= False
-                      , get_link_state = False, plane_type = 'xz', disable_plot = False):
+                      , get_link_state = False, plane_type = 'xz', disable_plot = False, aerial_height=0):
         """
         this function plot the heat map using a SNR matrix
         Parameters
@@ -112,7 +112,11 @@ class Heat_Map(object):
 
         cmap = plt.get_cmap(self.cmap_name)
         x = self.net_work_area_hori
-        y = self.net_work_area_verti
+        if plane_type == 'xz' or plane_type == 'yz':
+            y = self.net_work_area_verti - aerial_height
+        else:
+            y = self.net_work_area_verti
+
         SNR_matrix, link_state_matrix = \
             self.get_snr_from_plane(x, y, tilt_angle= tilt_angle, plane_type=self.plane_type, plane_shift=self.plane_shift)
         SNR_matrix = np.flipud(SNR_matrix)
@@ -137,6 +141,7 @@ class Heat_Map(object):
             if get_link_state is True:
                 plt.figure (2)
                 link_state_matrix = np.flipud(link_state_matrix)
+
                 annot_ = np.empty_like(link_state_matrix)
                 annot_ = np.array (annot_, dtype = object)
                 annot_[link_state_matrix == 1] = 'L'
@@ -212,6 +217,7 @@ class Heat_Map(object):
         cell_type_vec = cell_type_vec.reshape(-1,)
         snr = np.zeros(npts)
         chan_list, link_state = self.chan_mod.sample_path(dvec, cell_type_vec)
+
         for i in range(npts):
             # Generate random channels
             chan = chan_list[i]
