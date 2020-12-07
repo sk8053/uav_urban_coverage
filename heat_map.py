@@ -206,7 +206,7 @@ class Heat_Map(object):
 
         npts = self.npts
         dvec = np.repeat([[dx, dy, dz]], npts, axis=0)
-        arr_gnb_list_t = multi_sect_array( \
+        arr_gnb_list = multi_sect_array( \
                 self.arr_gnb0, sect_type='azimuth', theta0=tilt_angle, nsect=self.nsect)
         cell_type_vec = np.repeat([self.cell_type], npts, axis=0)
         cell_type_vec = cell_type_vec.reshape(-1,)
@@ -216,7 +216,7 @@ class Heat_Map(object):
             # Generate random channels
             chan = chan_list[i]
             pl_gain = dir_path_loss_multi_sect( \
-                arr_gnb_list_t, [self.arr_ue], chan)[0]
+                arr_gnb_list, [self.arr_ue], chan)[0]
             # Compute the  SNR
             snri = self.tx_pow - pl_gain - self.kT - self.nf - 10 * np.log10(self.bw)
             snr[i] = snri
@@ -232,11 +232,11 @@ class Heat_Map(object):
         print ('Get data from UAVs for terrestrial BS')
         self.plane_shift = plane_shift
         SNR_matrix_t, link_state_t = self.plot_heat_map(bs_type="Terrestrial", tilt_angle= tilt_angel_t,
-                                                        plane_type='xy', nsect=3, cdf_prob=0.5, disable_plot=True)
+                                                        plane_type='xy', nsect=3, cdf_prob=self.cdf_prob, disable_plot=True)
         print ('Get data from UAVs for aerial BS')
         self.plane_shift-= aerial_height # change the plane shift value for computing height of aerial BSs
         SNR_matrix_a, link_state_a = self.plot_heat_map(bs_type="Aerial", tilt_angle=tilt_angle_a, plane_type='xy',
-                                                        nsect=3, cdf_prob=0.5, disable_plot=True)
+                                                        nsect=3, cdf_prob=self.cdf_prob, disable_plot=True)
         maximum_SNR = np.maximum(SNR_matrix_a, SNR_matrix_t)
         associatioin_matrix = np.array((maximum_SNR==SNR_matrix_a), dtype= int)
         x = self.net_work_area_hori
