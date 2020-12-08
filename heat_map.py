@@ -123,7 +123,8 @@ class Heat_Map(object):
         SNR_matrix = np.flipud(SNR_matrix)
 
         if disable_plot is not True:
-            h_map.heatmap(SNR_matrix, cmap=cmap, xticklabels=np.round(x, 2), yticklabels=np.flip(np.round(y, 2)),
+            h_map.heatmap(SNR_matrix, cmap=cmap, xticklabels=np.round(self.net_work_area_hori, 2),
+                          yticklabels=np.flip(np.round(self.net_work_area_verti, 2)),
                             annot = annot, cbar = not annot)
 
             plt.xlabel("distance along "+ list(plane_type)[0]+ " axis (m)")
