@@ -23,8 +23,8 @@ import numpy as np
 class Heat_Map(object):
 
     def __init__(self, mod_name='uav_beijing', bs_type = 'Terrestrial',  npts=100
-                , nsect = 3, cdf_prob = 0.5, net_work_area_hori = np.linspace(0, 100, 20),
-                net_work_area_verti = np.linspace(1, 150,20), cmap_name = 'plasma',
+                , nsect = 3, cdf_prob = 0.5, horizontal_axis_of_net = np.linspace(0, 100, 20),
+                vertical_axis_of_net = np.linspace(1, 150,20), cmap_name = 'plasma',
                  plane_type = 'xz', plane_shift = 0):
         """
         This class plots a heat map showing strength of SNR values using color bar
@@ -50,8 +50,8 @@ class Heat_Map(object):
         self.nf = 6  # Noise figure in dB
         self.kT = -174  # Thermal noise in dBm/Hz
         self.tx_pow = 23  # TX power in dBm
-        self.net_work_area_hori = net_work_area_hori
-        self.net_work_area_verti = net_work_area_verti
+        self.horizontal_axis_of_net = horizontal_axis_of_net
+        self.vertical_axis_of_net = vertical_axis_of_net
         self.cmap_name = cmap_name
         self.plane_type = plane_type
         self.plane_shift = plane_shift # value for shifting plane
@@ -112,19 +112,19 @@ class Heat_Map(object):
         self.plane_type = plane_type
 
         cmap = plt.get_cmap(self.cmap_name)
-        x = self.net_work_area_hori
+        x = self.horizontal_axis_of_net
         if plane_type == 'xz' or plane_type == 'yz':
-            y = self.net_work_area_verti - bs_height
+            y = self.vertical_axis_of_net - bs_height
         else:
-            y = self.net_work_area_verti
+            y = self.vertical_axis_of_net
 
         SNR_matrix, link_state_matrix = \
             self.get_snr_from_plane(x, y, tilt_angle= tilt_angle, plane_type=self.plane_type, plane_shift=self.plane_shift)
         SNR_matrix = np.flipud(SNR_matrix)
 
         if disable_plot is not True:
-            h_map.heatmap(SNR_matrix, cmap=cmap, xticklabels=np.round(self.net_work_area_hori, 2),
-                          yticklabels=np.flip(np.round(self.net_work_area_verti, 2)),
+            h_map.heatmap(SNR_matrix, cmap=cmap, xticklabels=np.round(self.horizontal_axis_of_net, 2),
+                          yticklabels=np.flip(np.round(self.vertical_axis_of_net, 2)),
                             annot = annot, cbar = not annot)
 
             plt.xlabel("distance along "+ list(plane_type)[0]+ " axis (m)")
