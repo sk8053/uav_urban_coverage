@@ -238,7 +238,7 @@ class Heat_Map(object):
 
         return snr_, link_state[ind]
 
-    def get_association(self,aerial_height=30, annot = True, tilt_angel_t = -12, tilt_angle_a= 45,
+    def get_association(self, annot = True, tilt_angel_t = -12, tilt_angle_a= 45,
                         bs_height_a =10, bs_height_t =0, plane_type = 'xy'):
         print ('Get data from UAVs for terrestrial BS')
 
