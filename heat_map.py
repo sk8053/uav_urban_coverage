@@ -247,8 +247,8 @@ class Heat_Map(object):
                                                         nsect=3, cdf_prob=self.cdf_prob, disable_plot=True)
         maximum_SNR = np.maximum(SNR_matrix_a, SNR_matrix_t)
         associatioin_matrix = np.array((maximum_SNR==SNR_matrix_a), dtype= int)
-        x = self.net_work_area_hori
-        y = self.net_work_area_verti
+        x = self.horizontal_axis_of_net
+        y = self.vertical_axis_of_net
 
         annot_ = np.empty_like(associatioin_matrix)
         annot_ = np.array (annot_, dtype= object)
