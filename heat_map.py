@@ -115,11 +115,13 @@ class Heat_Map(object):
         x = self.horizontal_axis_of_net
         if plane_type == 'xz' or plane_type == 'yz':
             y = self.vertical_axis_of_net - bs_height
-        else:
+            plane_shift = self.plane_shift
+        elif plane_type == 'xy':
             y = self.vertical_axis_of_net
+            plane_shift = self.plane_shift - bs_height
 
         SNR_matrix, link_state_matrix = \
-            self.get_snr_from_plane(x, y, tilt_angle= tilt_angle, plane_type=self.plane_type, plane_shift=self.plane_shift)
+            self.get_snr_from_plane(x, y, tilt_angle= tilt_angle, plane_type=self.plane_type, plane_shift=plane_shift)
         SNR_matrix = np.flipud(SNR_matrix)
 
         if disable_plot is not True:
@@ -236,15 +238,17 @@ class Heat_Map(object):
 
         return snr_, link_state[ind]
 
-    def get_association(self,aerial_height=30, annot = True, tilt_angel_t = -12, tilt_angle_a= 45, plane_shift = 30):
+    def get_association(self,aerial_height=30, annot = True, tilt_angel_t = -12, tilt_angle_a= 45,
+                        bs_height_a =10, bs_height_t =0, plane_type = 'xy'):
         print ('Get data from UAVs for terrestrial BS')
-        self.plane_shift = plane_shift
+
         SNR_matrix_t, link_state_t = self.plot_heat_map(bs_type="Terrestrial", tilt_angle= tilt_angel_t,
-                                                        plane_type='xy', nsect=3, cdf_prob=self.cdf_prob, disable_plot=True)
+                                                        plane_type=plane_type, nsect=3, cdf_prob=self.cdf_prob,
+                                                        disable_plot=True, bs_height=bs_height_t)
         print ('Get data from UAVs for aerial BS')
         self.plane_shift-= aerial_height # change the plane shift value for computing height of aerial BSs
-        SNR_matrix_a, link_state_a = self.plot_heat_map(bs_type="Aerial", tilt_angle=tilt_angle_a, plane_type='xy',
-                                                        nsect=3, cdf_prob=self.cdf_prob, disable_plot=True)
+        SNR_matrix_a, link_state_a = self.plot_heat_map(bs_type="Aerial", tilt_angle=tilt_angle_a, plane_type=plane_type,
+                                                        nsect=3, cdf_prob=self.cdf_prob, disable_plot=True, bs_height= bs_height_a)
         maximum_SNR = np.maximum(SNR_matrix_a, SNR_matrix_t)
         associatioin_matrix = np.array((maximum_SNR==SNR_matrix_a), dtype= int)
         x = self.horizontal_axis_of_net
