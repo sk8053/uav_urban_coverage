@@ -246,7 +246,6 @@ class Heat_Map(object):
                                                         plane_type=plane_type, nsect=3, cdf_prob=self.cdf_prob,
                                                         disable_plot=True, bs_height=bs_height_t)
         print ('Get data from UAVs for aerial BS')
-        self.plane_shift-= aerial_height # change the plane shift value for computing height of aerial BSs
         SNR_matrix_a, link_state_a = self.plot_heat_map(bs_type="Aerial", tilt_angle=tilt_angle_a, plane_type=plane_type,
                                                         nsect=3, cdf_prob=self.cdf_prob, disable_plot=True, bs_height= bs_height_a)
         maximum_SNR = np.maximum(SNR_matrix_a, SNR_matrix_t)
