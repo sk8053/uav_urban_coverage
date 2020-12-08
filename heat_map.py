@@ -84,7 +84,7 @@ class Heat_Map(object):
         self.vmax = 60
 
     def plot_heat_map(self, bs_type = 'Terrestrial', tilt_angle = 45, nsect = 3, cdf_prob = 0.5, annot= False
-                      , get_link_state = False, plane_type = 'xz', disable_plot = False, aerial_height=0):
+                      , get_link_state = False, plane_type = 'xz', disable_plot = False, bs_height=0):
         """
         this function plot the heat map using a SNR matrix
         Parameters
@@ -96,6 +96,7 @@ class Heat_Map(object):
         annot: if Ture, write data values in each cell of heatmap
         get_link_state: if True, we will see link state heat map with values or symbols in each cell
         disable_plot: if True, we only get data and don't plot heatmap
+        bs_height: the height of BS, the value of z axis
         Returns
         -------
 
@@ -113,7 +114,7 @@ class Heat_Map(object):
         cmap = plt.get_cmap(self.cmap_name)
         x = self.net_work_area_hori
         if plane_type == 'xz' or plane_type == 'yz':
-            y = self.net_work_area_verti - aerial_height
+            y = self.net_work_area_verti - bs_height
         else:
             y = self.net_work_area_verti
 
