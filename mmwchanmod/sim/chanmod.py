@@ -6,7 +6,6 @@ import numpy as np
 
 from mmwchanmod.common.constants import LinkState
 
-
 class MPChan(object):
     """
     Class for storing list of rays
@@ -18,7 +17,7 @@ class MPChan(object):
     aod_theta_ind = 3
     ang_name = ['AoA_Phi', 'AoA_theta', 'AoD_phi', 'AoD_theta']
 
-    large_pl = 2500
+    large_pl = 250
 
     def __init__(self):
         """
@@ -27,9 +26,9 @@ class MPChan(object):
         Creates an empty channel
         """
         # Parameters for each ray
-        self.pl = np.zeros(0, dtype=np.float32)
+        self.pl  = np.zeros(0, dtype=np.float32)
         self.dly = np.zeros(0, dtype=np.float32)
-        self.ang = np.zeros((0, MPChan.nangle), dtype=np.float32)
+        self.ang = np.zeros((0,MPChan.nangle), dtype=np.float32)
         self.link_state = LinkState.no_link
 
     def comp_omni_path_loss(self):
@@ -44,10 +43,11 @@ class MPChan(object):
             pl_omni = np.inf
         else:
             pl_min = np.min(self.pl)
-            pl_lin = 10 ** (-0.1 * (self.pl - pl_min))
-            pl_omni = pl_min - 10 * np.log10(np.sum(pl_lin))
+            pl_lin = 10**(-0.1*(self.pl-pl_min))
+            pl_omni = pl_min-10*np.log10(np.sum(pl_lin) )
 
         return pl_omni
+
 
     def rms_dly(self):
         """
@@ -61,19 +61,18 @@ class MPChan(object):
             dly_rms = 0
         else:
             # Compute weights
-            pl_min = np.min(self.pl)
-            w = 10 ** (-0.1 * (self.pl - pl_min))
+            pl_min = np.min(self.pl) #
+            w = 10**(-0.1*(self.pl-pl_min))
             w = w / np.sum(w)
 
             # Compute weighted RMS
             dly_mean = w.dot(self.dly)
-            dly_rms = np.sqrt(w.dot((self.dly - dly_mean) ** 2))
+            dly_rms = np.sqrt( w.dot((self.dly-dly_mean)**2) )
 
         return dly_rms
 
-
-def dir_path_loss(tx_arr, rx_arr, chan, return_elem_gain=True, \
-                  return_bf_gain=True):
+def dir_path_loss(tx_arr, rx_arr, chan, return_elem_gain=True,\
+                       return_bf_gain=True):
     """
     Computes the directional path loss between RX and TX arrays
     Parameters
@@ -108,13 +107,14 @@ def dir_path_loss(tx_arr, rx_arr, chan, return_elem_gain=True, \
 
         # Get the angles of the path
         # Note that we have to convert from inclination to elevation angle
-        aod_theta = 90 - chan.ang[:, MPChan.aod_theta_ind]
-        aod_phi = chan.ang[:, MPChan.aod_phi_ind]
-        aoa_theta = 90 - chan.ang[:, MPChan.aoa_theta_ind]
-        aoa_phi = chan.ang[:, MPChan.aoa_phi_ind]
+        aod_theta = 90 - chan.ang[:,MPChan.aod_theta_ind]
+        aod_phi = chan.ang[:,MPChan.aod_phi_ind]
+        aoa_theta = 90 - chan.ang[:,MPChan.aoa_theta_ind]
+        aoa_phi = chan.ang[:,MPChan.aoa_phi_ind]
 
         tx_sv, tx_elem_gain = tx_arr.sv(aod_phi, aod_theta, return_elem_gain=True)
         rx_sv, rx_elem_gain = rx_arr.sv(aoa_phi, aoa_theta, return_elem_gain=True)
+
 
         # Compute path loss with element gains
         pl_elem = chan.pl - tx_elem_gain - rx_elem_gain
@@ -123,16 +123,16 @@ def dir_path_loss(tx_arr, rx_arr, chan, return_elem_gain=True, \
         im = np.argmin(pl_elem)
 
         # Beamform in that direction
-        wtx = np.conj(tx_sv[im, :])
-        wtx = wtx / np.sqrt(np.sum(np.abs(wtx) ** 2))
-        wrx = np.conj(rx_sv[im, :])
-        wrx = wrx / np.sqrt(np.sum(np.abs(wrx) ** 2))
+        wtx = np.conj(tx_sv[im,:])
+        wtx = wtx / np.sqrt(np.sum(np.abs(wtx)**2))
+        wrx = np.conj(rx_sv[im,:])
+        wrx = wrx / np.sqrt(np.sum(np.abs(wrx)**2))
 
         # Compute the gain with both the element and BF gain
         # Note that we add the factor 10*np.log10(nanttx) to
         # account the division of power across the TX antennas
-        tx_bf = 20 * np.log10(np.abs(tx_sv.dot(wtx)))
-        rx_bf = 20 * np.log10(np.abs(rx_sv.dot(wrx)))
+        tx_bf = 20*np.log10(np.abs(tx_sv.dot(wtx)))
+        rx_bf = 20*np.log10(np.abs(rx_sv.dot(wrx)))
         pl_bf = chan.pl - tx_bf - rx_bf
 
         # Subtract the TX and RX element gains
@@ -141,14 +141,14 @@ def dir_path_loss(tx_arr, rx_arr, chan, return_elem_gain=True, \
 
         # Compute effective path loss
         pl_min = np.min(pl_bf)
-        pl_lin = 10 ** (-0.1 * (pl_bf - pl_min))
-        pl_eff = pl_min - 10 * np.log10(np.sum(pl_lin))
+        pl_lin = 10**(-0.1*(pl_bf-pl_min))
+        pl_eff = pl_min-10*np.log10(np.sum(pl_lin) )
 
     # Get outputs
     if not (return_bf_gain or return_elem_gain):
         return pl_eff
     else:
-        out = [pl_eff]
+        out =[pl_eff]
         if return_elem_gain:
             out.append(tx_elem_gain)
             out.append(rx_elem_gain)
@@ -157,9 +157,8 @@ def dir_path_loss(tx_arr, rx_arr, chan, return_elem_gain=True, \
             out.append(rx_bf)
         return out
 
-
-def dir_path_loss_multi_sect(tx_arr_list, rx_arr_list, chan, return_elem_gain=True, \
-                             return_bf_gain=True, return_arr_ind=True):
+def dir_path_loss_multi_sect(tx_arr_list, rx_arr_list, chan, return_elem_gain=True,\
+                       return_bf_gain=True, return_arr_ind=True, bf_ch_return = False):
     """
     Computes the directional path loss between list of RX and TX arrays.
     This is typically used when the TX or RX have multiple sectors
@@ -190,40 +189,49 @@ def dir_path_loss_multi_sect(tx_arr_list, rx_arr_list, chan, return_elem_gain=Tr
 
     if chan.link_state == LinkState.no_link:
         pl_eff = MPChan.large_pl
-        tx_elem_gain = np.array(0)
-        rx_elem_gain = np.array(0)
+        pathloss_min = MPChan.large_pl
+        tx_elem_gain = np.array([0])
+        rx_elem_gain = np.array([0])
         ind_rx = 0
         ind_tx = 0
-        tx_bf = np.array(0)
-        rx_bf = np.array(0)
-
+        tx_bf = np.array([0])
+        rx_bf = np.array([0])
+        aod_theta = np.array([0])
+        aod_phi = np.array([0])
+        aoa_theta = np.array([0])
+        aoa_phi = np.array([0])
+        im = 0
+        rx_sv = np.array(0)
+        tx_sv = np.array(0)
+        wtx = np.array (0)
+        wrx = np.array(0)
+        aod_phi_local, aod_theta_local = np.array([0]), np.array([0])
+        aoa_phi_local, aoa_theta_local = np.array([0]), np.array([0])
     else:
 
         # Get the angles of the path
         # Note that we have to convert from inclination to elevation angle
-        aod_theta = 90 - chan.ang[:, MPChan.aod_theta_ind]
-        aod_phi = chan.ang[:, MPChan.aod_phi_ind]
-        aoa_theta = 90 - chan.ang[:, MPChan.aoa_theta_ind]
-        aoa_phi = chan.ang[:, MPChan.aoa_phi_ind]
+        aod_theta = 90 - chan.ang[:,MPChan.aod_theta_ind]
+        aod_phi = chan.ang[:,MPChan.aod_phi_ind]
+        aoa_theta = 90 - chan.ang[:,MPChan.aoa_theta_ind]
+        aoa_phi = chan.ang[:,MPChan.aoa_phi_ind]
 
         # Loop over the array combinations to find the best array
         # with the lowest path loss
         pl_min = MPChan.large_pl
         for irx, rx_arr in enumerate(rx_arr_list):
             for itx, tx_arr in enumerate(tx_arr_list):
-
-                tx_svi, tx_elem_gaini = tx_arr.sv(aod_phi, aod_theta, \
-                                                  return_elem_gain=True)
-                rx_svi, rx_elem_gaini = rx_arr.sv(aoa_phi, aoa_theta, \
-                                                  return_elem_gain=True)
+                tx_svi, tx_elem_gaini, aod_phi_local_i,aod_theta_local_i = tx_arr.sv(aod_phi, aod_theta,dly =chan.dly,\
+                                                return_elem_gain=True )
+                rx_svi, rx_elem_gaini, aoa_phi_local_i, aoa_theta_local_i = rx_arr.sv(aoa_phi, aoa_theta\
+                                                ,return_elem_gain=True)
 
                 # Compute path loss with element gains
                 pl_elemi = chan.pl - tx_elem_gaini - rx_elem_gaini
 
                 # Select the path with the lowest path loss
                 pl_mini = np.min(pl_elemi)
-
-                if pl_mini < pl_min :
+                if pl_mini < pl_min:
                     pl_min = pl_mini
                     im = np.argmin(pl_elemi)
                     tx_sv = tx_svi
@@ -232,19 +240,19 @@ def dir_path_loss_multi_sect(tx_arr_list, rx_arr_list, chan, return_elem_gain=Tr
                     rx_elem_gain = rx_elem_gaini
                     ind_rx = irx
                     ind_tx = itx
+                    aod_phi_local, aod_theta_local = aod_phi_local_i,aod_theta_local_i
+                    aoa_phi_local, aoa_theta_local = aoa_phi_local_i, aoa_theta_local_i
 
         # Beamform in that direction
-        wtx = np.conj(tx_sv[im, :])
-
-        wtx = wtx / np.sqrt(np.sum(np.abs(wtx) ** 2))
-        wrx = np.conj(rx_sv[im, :])
-        wrx = wrx / np.sqrt(np.sum(np.abs(wrx) ** 2))
+        wtx = np.conj(tx_sv[im,:])
+        wtx = wtx / np.sqrt(np.sum(np.abs(wtx)**2))
+        wrx = np.conj(rx_sv[im,:])
+        wrx = wrx / np.sqrt(np.sum(np.abs(wrx)**2))
 
         # Compute the gain with both the element and BF gain
-        tx_bf = 20 * np.log10(np.abs(tx_sv.dot(wtx)))
-        rx_bf = 20 * np.log10(np.abs(rx_sv.dot(wrx)))
-        # Marco try to remove element gains
-        pl_bf = chan.pl - tx_bf - rx_bf #+ tx_elem_gain + rx_elem_gain
+        tx_bf = 20*np.log10(np.abs(tx_sv.dot(wtx)))
+        rx_bf = 20*np.log10(np.abs(rx_sv.dot(wrx)))
+        pl_bf = chan.pl - tx_bf - rx_bf
 
         # Subtract the TX and RX element gains
         tx_bf -= tx_elem_gain
@@ -252,21 +260,18 @@ def dir_path_loss_multi_sect(tx_arr_list, rx_arr_list, chan, return_elem_gain=Tr
 
         # Compute effective path loss
         pl_min = np.min(pl_bf)
-        pl_lin = 10 ** (-0.1 * (pl_bf - pl_min))
-        pl_eff = pl_min - 10 * np.log10(np.sum(pl_lin))
+        pl_lin = 10**(-0.1*(pl_bf-pl_min))
+        pl_eff = pl_min-10*np.log10(np.sum(pl_lin) )
+        pathloss_min = min(chan.pl)
 
-        # Get outputs
-    if not (return_bf_gain or return_elem_gain):
-        return pl_eff
+    # Get outputs
+    out ={'pl_eff':pl_eff, 'ind_tx':ind_tx, 'ind_rx':ind_rx, 'tx_elem_gain': tx_elem_gain[im],
+              'rx_elem_gain':rx_elem_gain[im], 'tx_bf':tx_bf[im], 'rx_bf':rx_bf[im]
+          , 'aod_theta':aod_theta[im],'aod_phi':aod_phi[im], 'aoa_theta':aoa_theta[im]
+                  ,'aoa_phi':aoa_phi[im], 'pl_min':pathloss_min}
+
+    if bf_ch_return is True:
+        return out, {'wtx':wtx, 'wrx':wrx, 'tx_sv':tx_sv, 'rx_sv':rx_sv}
     else:
-        out = [pl_eff]
-        if return_arr_ind:
-            out.append(ind_tx)
-            out.append(ind_rx)
-        if return_elem_gain:
-            out.append(tx_elem_gain)
-            out.append(rx_elem_gain)
-        if return_bf_gain:
-            out.append(tx_bf)
-            out.append(rx_bf)
-        return out
+        return out #,{'aod_phi_loc':aod_phi_local, 'aod_theta_loc':aod_theta_local
+                   # , 'aoa_phi_loc':aoa_phi_local, 'aoa_theta_loc':aoa_theta_local}

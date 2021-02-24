@@ -14,7 +14,7 @@ def cart_to_sph(d):
     d : (n,3) array
         vector of positions
 
-    Returns
+    Returns:
     -------
     r:  (n,) array
         radius of each point
@@ -98,25 +98,34 @@ def spherical_add_sub(phi0, theta0, phi1, theta1, sub=True):
 
     if sub:
         # Find unit vector in direction of (theta0,phi0)
-        x1 = np.sin(theta0) * np.cos(phi0)
+        x1 = np.sin(theta0) * np.cos(phi0) # theta is inclination angle
         x2 = np.sin(theta0) * np.sin(phi0)
         x3 = np.cos(theta0)
 
-        # Rotate by -phi1.
+        # Rotate by -phi1 around z axis
         y1 = x1 * np.cos(phi1) + x2 * np.sin(phi1)
         y2 = -x1 * np.sin(phi1) + x2 * np.cos(phi1)
         y3 = x3
 
-        # Rotate by -theta1
+        # Rotate by -theta1 around y axis
         z1 = y1 * np.cos(theta1) - y3 * np.sin(theta1)
         z3 = y1 * np.sin(theta1) + y3 * np.cos(theta1)
         z2 = y2
+
         z1 = np.minimum(1, np.maximum(-1, z1))
+        #
+        #z1 = y1 * np.cos(theta1) - y3 * np.sin(theta1)
+        #z3 = y1 * np.sin(theta1) + y3 * np.cos(theta1)
+        #z2 = y2
+        #z1 = np.minimum(1, np.maximum(-1, z1))
 
         # Compute the angle of the transformed vector
         # we use the (z3,z2,z1) coordinate system
         phi2 = np.arctan2(z2, z3) * 180 / np.pi
-        theta2 = np.arcsin(z1) * 180 / np.pi
+        theta2 = -np.arcsin(z1) * 180 / np.pi
+        #phi2 = np.arctan2(z2, z1) * 180 / np.pi
+        #theta2 = np.arccos(z3) * 180 / np.pi
+
     else:
 
         # Find unit vector in direction of (theta0,phi0)

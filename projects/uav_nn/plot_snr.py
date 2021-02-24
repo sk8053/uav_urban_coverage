@@ -142,8 +142,7 @@ for iplot, rx_type0 in enumerate(rx_types):
     dvec = np.column_stack((dx*np.cos(phi), dx*np.sin(phi), dz))
 
     rx_type_vec = np.tile(iplot, (ns,))
-        
-        
+
     # Loop over multiple trials
     snr = np.zeros((nz,nx,npts))
             

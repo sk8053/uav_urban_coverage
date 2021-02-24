@@ -5,7 +5,6 @@ import numpy as np
 from mmwchanmod.common.constants import PhyConst
 from mmwchanmod.common.spherical import sph_to_cart, spherical_add_sub
 from mmwchanmod.sim.antenna import plot_pattern, ElemIsotropic
-from copy import deepcopy
 
 
 class ArrayBase(object):
@@ -33,7 +32,7 @@ class ArrayBase(object):
         self.elem_pos = elem_pos
         self.fc = fc
 
-    def sv(self, phi, theta, include_elem=True, return_elem_gain=False):
+    def sv(self, phi, theta,dly=0, include_elem=True, return_elem_gain=False):
         """
         Gets the steering vectors for the array
         Parameters
@@ -75,15 +74,15 @@ class ArrayBase(object):
         if include_elem:
             elem_gain = self.elem.response(phi, theta)
             elem_gain_lin = 10 ** (0.05 * elem_gain)
-            usv = usv * elem_gain_lin[:, None]
+            usv = usv * elem_gain_lin[:, None] * np.exp (-1j*2*np.pi*dly*28e9)
         else:
             n = len(phi)
             elem_gain = np.zeros(n)
 
         if return_elem_gain:
-            return usv, elem_gain
+            return usv, elem_gain, phi, theta
         else:
-            return usv
+            return usv,phi, theta
 
     def conj_bf(self, phi, theta):
         """
@@ -311,8 +310,6 @@ def multi_sect_array(arr0, sect_type='azimuth', theta0=0, phi0=0., nsect=3):
     arr_list = []
     for p, t in zip(phi0, theta0):
         arr = RotatedArray(arr0, phi0=p, theta0=t)
-        # arr =  deepcopy(arr0)
-       # print (p, t)
         arr_list.append(arr)
 
     return arr_list

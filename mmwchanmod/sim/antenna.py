@@ -293,6 +293,7 @@ class Elem3GPP(ElemBase):
         phi1 = phi1 % 360
         phi1 = phi1 - 360 * (phi1 > 180)
 
+        #print (min(phi), max(phi))
         # plot_pattern(self.response,100,0,0,100,'rect_phi')
 
         if self.thetabw > 0:
@@ -304,6 +305,7 @@ class Elem3GPP(ElemBase):
         else:
             Ah = 0
         gain = self.gain_max - np.minimum(-Av - Ah, self.Am)
+
         return gain
 
     def calibrate(self, ns=10000):
