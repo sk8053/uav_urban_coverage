@@ -1,9 +1,11 @@
 from tqdm import tqdm
 import numpy as np
-from coverage_analysis.network import ConfigureNetwork
+import sys
+sys.path.append('../')
+from network import ConfigureNetwork
 import argparse
-from coverage_analysis.mmchanmod import MmwaveChanel
-from coverage_analysis.ppp_deployment import PPP_deployment
+from mmchanmod import MmwaveChanel
+from ppp_deployment import PPP_deployment
 from collections import Counter
 import matplotlib.pyplot as plt
 
@@ -75,7 +77,7 @@ for iteration in tqdm(range (max_iter), desc='# of iterations'):
 
 # save the SNR values for each case as pickle files
 ISD_t = scenarios['isd_t']
-dir = 'snr_data/'
+dir = '../data/'
 net.save_SNR_DATA(ISD_t, uav_height,DATA_All, dir)
 
 #deployment_model.plot()
