@@ -1,4 +1,4 @@
-# Millimeter-Wave UAV Coveragein Urban Environments
+# Millimeter-Wave UAV Coverage in Urban Environments
 
 With growing interest in mmWave connectivity for unmanned aerial vehicles (UAVs), a basic question is whether networks intended for terrestrial service can provide sufficient aerial coverage as well. To assess this possibility, in urban environments specifically,
 extensive system-level simulations are conducted using a generative channel model recently proposed by the authors.
