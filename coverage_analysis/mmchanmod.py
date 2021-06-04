@@ -44,7 +44,7 @@ class MmwaveChanel():
         self.pl_max = 200.0
         # Construct the channel model object
         K.clear_session()
-        self.chan_mod = load_model('uav_lon_tok', src = 'remote')
+        self.chan_mod = load_model('uav_boston', src = 'remote')
         self.npath_max = self.chan_mod.npaths_max
         # Load the learned link classifier model
         self.chan_mod.load_link_model()
@@ -65,7 +65,7 @@ class MmwaveChanel():
         arr_gnb_a = URA(elem=elem_gnb_a, nant=np.array([8, 8]), fc=self.frequency)
         arr_ue0 =  URA(elem= elem_ue, nant=np.array([4,4]), fc = self.frequency)
 
-        self.arr_ue_list.append(RotatedArray(arr_ue0, theta0=self.uav_elev_angle))
+        self.arr_ue_list.append(RotatedArray(arr_ue0, theta0=self.uav_elev_angle, drone = True))
         self.arr_gnb_list_a = multi_sect_array( arr_gnb_a, sect_type= 'azimuth', nsect=self.nsect_a, theta0=self.bs_elev_angle_a )
         self.arr_gnb_list_t = multi_sect_array(arr_gnb_t, sect_type = 'azimuth', nsect= self.nsect_t,theta0=self.bs_elev_angle_t)
 
@@ -93,7 +93,12 @@ class MmwaveChanel():
         pl_gain = np.zeros(len(link_types))
 
         data_for_all_links = np.array([])
+
         for j, channel in enumerate(channels):
+            #if channel.link_state != LinkState.no_link:
+            #    channel.pl = np.array([channel.pl[0]])
+            #    channel.ang =np.array([channel.ang[0]])
+
             if cell_type[j]== 1:  # 1 is terrestrial
                 arr_gnb_list = self.arr_gnb_list_t
             else:
@@ -102,7 +107,9 @@ class MmwaveChanel():
             # compute free space loss
             fspl = 10 * np.log10(np.power(4 * self.pi * dist_3d / self.lambda_, 2))
             channel.pl [channel.pl<fspl] = fspl # in case that the generated path loss is less than FSPL
-            data = dir_path_loss_multi_sect(arr_gnb_list, self.arr_ue_list,channel)
+            data = dir_path_loss_multi_sect(arr_gnb_list, self.arr_ue_list,channel, long_term_bf=True, instantaneous_bf=False)
+            #data = dir_path_loss_multi_sect(arr_gnb_list, self.arr_ue_list, channel, long_term_bf=True,instantaneous_bf=False)
+
             # below linnes are for logging all parameters per every link
             data['BS_type'] = cell_type[j]
             data['link_state'] = link_types[j]

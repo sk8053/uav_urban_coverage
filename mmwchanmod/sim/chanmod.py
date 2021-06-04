@@ -3,7 +3,7 @@ chanmod.py:  Methods for modeling multi-path channels
 """
 
 import numpy as np
-
+import copy
 from mmwchanmod.common.constants import LinkState
 
 class MPChan(object):
@@ -158,7 +158,8 @@ def dir_path_loss(tx_arr, rx_arr, chan, return_elem_gain=True,\
         return out
 
 def dir_path_loss_multi_sect(tx_arr_list, rx_arr_list, chan, return_elem_gain=True,\
-                       return_bf_gain=True, return_arr_ind=True, bf_ch_return = False):
+                       return_bf_gain=True, return_arr_ind=True, bf_ch_return = False,
+                             long_term_bf = False, instantaneous_bf = False, drone_pattern = False):
     """
     Computes the directional path loss between list of RX and TX arrays.
     This is typically used when the TX or RX have multiple sectors
@@ -205,15 +206,17 @@ def dir_path_loss_multi_sect(tx_arr_list, rx_arr_list, chan, return_elem_gain=Tr
         tx_sv = np.array(0)
         wtx = np.array (0)
         wrx = np.array(0)
-        aod_phi_local, aod_theta_local = np.array([0]), np.array([0])
-        aoa_phi_local, aoa_theta_local = np.array([0]), np.array([0])
+        pl_min = 0
     else:
 
         # Get the angles of the path
         # Note that we have to convert from inclination to elevation angle
         aod_theta = 90 - chan.ang[:,MPChan.aod_theta_ind]
+        #print ('aod theta: ', aod_theta[0])
         aod_phi = chan.ang[:,MPChan.aod_phi_ind]
         aoa_theta = 90 - chan.ang[:,MPChan.aoa_theta_ind]
+        #print('aoa theta: ', aoa_theta[0])
+        #print (aoa_theta[0])
         aoa_phi = chan.ang[:,MPChan.aoa_phi_ind]
 
         # Loop over the array combinations to find the best array
@@ -221,10 +224,10 @@ def dir_path_loss_multi_sect(tx_arr_list, rx_arr_list, chan, return_elem_gain=Tr
         pl_min = MPChan.large_pl
         for irx, rx_arr in enumerate(rx_arr_list):
             for itx, tx_arr in enumerate(tx_arr_list):
-                tx_svi, tx_elem_gaini, aod_phi_local_i,aod_theta_local_i = tx_arr.sv(aod_phi, aod_theta,dly =chan.dly,\
-                                                return_elem_gain=True )
-                rx_svi, rx_elem_gaini, aoa_phi_local_i, aoa_theta_local_i = rx_arr.sv(aoa_phi, aoa_theta\
-                                                ,return_elem_gain=True)
+                tx_svi, tx_elem_gaini = tx_arr.sv(aod_phi, aod_theta,dly =chan.dly,\
+                                                return_elem_gain=True, drone = False, print_phi= False )
+                rx_svi, rx_elem_gaini = rx_arr.sv(aoa_phi, aoa_theta\
+                                                ,return_elem_gain=True, drone = True, print_phi = False) #, drone = True
 
                 # Compute path loss with element gains
                 pl_elemi = chan.pl - tx_elem_gaini - rx_elem_gaini
@@ -240,38 +243,118 @@ def dir_path_loss_multi_sect(tx_arr_list, rx_arr_list, chan, return_elem_gain=Tr
                     rx_elem_gain = rx_elem_gaini
                     ind_rx = irx
                     ind_tx = itx
-                    aod_phi_local, aod_theta_local = aod_phi_local_i,aod_theta_local_i
-                    aoa_phi_local, aoa_theta_local = aoa_phi_local_i, aoa_theta_local_i
+        tx_elem_gain_lin = 10 ** (0.05 * tx_elem_gain)
+        rx_elem_gain_lin = 10 ** (0.05 * rx_elem_gain)
+        tx_sv = tx_sv / tx_elem_gain_lin[:, None]
+        rx_sv = rx_sv / rx_elem_gain_lin[:, None]
+        n_rand = 100
 
-        # Beamform in that direction
-        wtx = np.conj(tx_sv[im,:])
-        wtx = wtx / np.sqrt(np.sum(np.abs(wtx)**2))
-        wrx = np.conj(rx_sv[im,:])
-        wrx = wrx / np.sqrt(np.sum(np.abs(wrx)**2))
+        if long_term_bf is True:
+            tx_sv2, rx_sv2 = copy.deepcopy(tx_sv), copy.deepcopy(rx_sv)
+            Cov_H_tx, Cov_H_rx, H_list = [],[],[]
+            H_frob = []
+            for i in range (n_rand):
+                theta_random = np.random.uniform(low=-np.pi, high=np.pi, size=(rx_sv.shape[0],))
+                rx_sv2 = rx_sv*np.exp(-1j*theta_random[:,None])
+                H = np.matrix.conj(rx_sv2).T.dot(tx_sv2)# H(f)
+                H_frob.append(np.linalg.norm(H,ord= 'fro')**2)
+                H_list.append(H)
+                Cov_H_tx.append(np.matrix.conj(H).T.dot(H))
+                Cov_H_rx.append(H.dot(np.matrix.conj(H).T))
 
-        # Compute the gain with both the element and BF gain
-        tx_bf = 20*np.log10(np.abs(tx_sv.dot(wtx)))
-        rx_bf = 20*np.log10(np.abs(rx_sv.dot(wrx)))
-        pl_bf = chan.pl - tx_bf - rx_bf
+            n_tx, n_rx = tx_sv.shape[1], rx_sv.shape[1]
+            G_omni = np.mean(H_frob)/(n_tx*n_rx)
+            Cov_H_rx = np.mean(Cov_H_rx, axis=0)  # 16*16 Qrx
+            Cov_H_tx = np.mean(Cov_H_tx, axis=0)  # 64*64 Qtx
 
-        # Subtract the TX and RX element gains
-        tx_bf -= tx_elem_gain
-        rx_bf -= rx_elem_gain
+            eig_value_rx,eig_vector_rx = np.linalg.eig(Cov_H_rx)
+            wrx= eig_vector_rx[:,np.argmax(eig_value_rx)] # 16*1
+            wrx = wrx / np.sqrt(np.sum(np.abs(wrx) ** 2))
+
+            eig_value_tx, eig_vector_tx = np.linalg.eig(Cov_H_tx)
+            wtx = eig_vector_tx[:,np.argmax(eig_value_tx)]  # 64*1
+            wtx = wtx / np.sqrt(np.sum(np.abs(wtx) ** 2))
+            bf_gain_list =[]
+            #s_list= []
+            for H in H_list:
+                g = np.matrix.conj(wrx).dot(H).dot(wtx)
+                g = g*np.conj(g)
+                #_, s, _ = np.linalg.svd(H)
+                #s_list.append(np.linalg.norm(s)**2)
+                bf_gain_list.append(g)
+            #print(np.mean(s_list) /np.mean(H_frob))
+            bf_gain = np.mean(bf_gain_list)
+            tx_rx_bf = 10*np.log10(abs(bf_gain)) - 10*np.log10(G_omni)
+            pl_bf = chan.pl - (tx_rx_bf) - tx_elem_gain - rx_elem_gain
+            #print('longterm',tx_rx_bf)
+            tx_bf =  tx_rx_bf
+            rx_bf = tx_rx_bf
+        elif instantaneous_bf is True:
+            tx_sv2, rx_sv2 = copy.deepcopy(tx_sv), copy.deepcopy(rx_sv)
+            H_list, H_frob = [], []
+            for i in range (n_rand):
+                theta_random = np.random.uniform(low=-np.pi, high=np.pi, size=(rx_sv.shape[0],))
+                rx_sv2 = rx_sv*np.exp(-1j*theta_random[:,None])
+                H = np.matrix.conj(rx_sv2).T.dot(tx_sv2)# H(f)
+                H_frob.append(np.linalg.norm(H,ord= 'fro')**2)
+                H_list.append(H)
+            n_tx, n_rx = tx_sv.shape[1], rx_sv.shape[1]
+            G_omni = np.mean(H_frob) / (n_tx * n_rx)
+
+            #wtx = np.conj(tx_sv[im,:])
+            #wtx = wtx / np.sqrt(np.sum(np.abs(wtx)**2))
+            #wrx = np.conj(rx_sv[im,:])
+            #wrx = wrx / np.sqrt(np.sum(np.abs(wrx)**2))
+
+            bf_gain_list = []
+            for H in H_list:
+                u,s, vh = np.linalg.svd(H)
+                wrx = u[:,np.argmax(s)]
+                wtx = vh[np.argmax(s)]
+                g = np.matrix.conj(wrx).dot(H).dot(np.matrix.conj(wtx)) # |wrx H wtx|
+                g = g*np.conj(g)
+                bf_gain_list.append(g)
+
+            bf_gain = np.mean(bf_gain_list)
+            tx_rx_bf = 10 * np.log10(abs(bf_gain)) - 10 * np.log10(G_omni)
+            #print (tx_rx_bf)
+            pl_bf = chan.pl - (tx_rx_bf) - tx_elem_gain - rx_elem_gain
+            tx_bf = tx_rx_bf
+            rx_bf = tx_rx_bf
+        else:
+            tx_sv = tx_sv * tx_elem_gain_lin[:, None]
+            rx_sv = rx_sv * rx_elem_gain_lin[:, None]
+            # Beamform in that direction
+            wtx = np.conj(tx_sv[im,:])
+            wtx = wtx / np.sqrt(np.sum(np.abs(wtx)**2))
+            wrx = np.conj(rx_sv[im,:])
+            wrx = wrx / np.sqrt(np.sum(np.abs(wrx)**2))
+
+            # Compute the gain with both the element and BF gain
+            tx_bf = 20*np.log10(np.abs(tx_sv.dot(wtx)))
+            rx_bf = 20*np.log10(np.abs(rx_sv.dot(wrx)))
+            pl_bf = chan.pl - (tx_bf + rx_bf)
+
+            # Subtract the TX and RX element gains
+            tx_bf -= tx_elem_gain
+            rx_bf -= rx_elem_gain
+            #print (tx_bf+rx_bf)
+            tx_bf, rx_bf = tx_bf[im], rx_bf[im]
 
         # Compute effective path loss
         pl_min = np.min(pl_bf)
+        #print (im, np.argmin(pl_min))
         pl_lin = 10**(-0.1*(pl_bf-pl_min))
         pl_eff = pl_min-10*np.log10(np.sum(pl_lin) )
         pathloss_min = min(chan.pl)
-
+    #im  = 0
     # Get outputs
     out ={'pl_eff':pl_eff, 'ind_tx':ind_tx, 'ind_rx':ind_rx, 'tx_elem_gain': tx_elem_gain[im],
-              'rx_elem_gain':rx_elem_gain[im], 'tx_bf':tx_bf[im], 'rx_bf':rx_bf[im]
-          , 'aod_theta':aod_theta[im],'aod_phi':aod_phi[im], 'aoa_theta':aoa_theta[im]
-                  ,'aoa_phi':aoa_phi[im], 'pl_min':pathloss_min}
+              'rx_elem_gain':rx_elem_gain[im], 'tx_bf':tx_bf, 'rx_bf':rx_bf
+          , 'aod_theta':aod_theta,'aod_phi':aod_phi[im], 'aoa_theta':aoa_theta
+                  ,'aoa_phi':aoa_phi[im], 'pl_min':pathloss_min, 'im':im}
 
     if bf_ch_return is True:
         return out, {'wtx':wtx, 'wrx':wrx, 'tx_sv':tx_sv, 'rx_sv':rx_sv}
     else:
-        return out #,{'aod_phi_loc':aod_phi_local, 'aod_theta_loc':aod_theta_local
-                   # , 'aoa_phi_loc':aoa_phi_local, 'aoa_theta_loc':aoa_theta_local}
+        return out

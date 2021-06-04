@@ -27,6 +27,7 @@ class snr_plot(object):
             self.DATA[str(h)] = {'all':data_all_dic, 'los':data_los, 'nlos':data_nlos,'outage':data_outage,
                                  'link_ratio':link_ratio, 'connected_ar':connected_ar}
 
+            #df.to_csv('SNR_'+h + '.txt', sep = '\t', index = False )
     def read_data(self, uav_height = 30, ISD_t= 200, dir=' '):
         """
         Read the data of SNR values and store it into a variable, DATA
@@ -46,6 +47,8 @@ class snr_plot(object):
         data_all_dic = dict()
         connected_ar = dict()
         link_ratio = np.array([])
+        NLOS = dict()
+        Connected = dict()
         for ISD_a in self.scenario['isd_a']:
             if ISD_a == np.inf:
                 ISD_a =0
@@ -56,24 +59,38 @@ class snr_plot(object):
             d_nlos = np.array(df[df['link_state']==2]['SNR'])
             d_outage = np.array(df[df['link_state'] == 0]['SNR'])
             d_all = np.array(df['SNR'])
+            df3 = pd.DataFrame(d_all)
+            df3.to_csv(dir + 'SNR_ISD_t_' + str(ISD_t) + '_ISD_a_' + str(ISD_a) + '_height_' + str(uav_height) + '.txt'
+                      , sep = '\t', index =False)
             data_los[str(ISD_a)] = d_los
             data_nlos[str(ISD_a)] = d_nlos
             data_outage[str(ISD_a)] = d_outage
 
             if ISD_a !=0:
                 connected_ar[str(ISD_a)] = np.sum(df['BS_type']==0)/len(df)
-
+                Connected[ISD_a] = [np.sum(df['BS_type']==0)/len(df)]
             data_all_dic [str(ISD_a)] = d_all
 
             L = len(d_all)
             link_ratio = np.append(link_ratio, np.array([len(d_los) / L, len(d_nlos) / L,
-                                                         (L - len(d_los) - len(d_nlos)) / L], dtype=float))
+                                                   (L - len(d_los) - len(d_nlos)) / L], dtype=float))
+
+            NLOS[ISD_a] = [len(d_nlos) / L]
+            #df2 = pd.DataFrame(link_ratio)
+            #df2.to_csv(dir + 'link_ratio_ISD_t_' + str(ISD_t) + '_ISD_a_' + str(ISD_a) + '_height_' + str(uav_height) + '.txt'
+                      #, sep = '\t', index =False)
             if self.enable_log is True:
                 print(f'UAV Height = {uav_height}, ISD_t and ISD a = {ISD_t, ISD_a}'
                       f', # of LOS, NLOS, and All = {len(d_los), len(d_nlos), len(d_all)}')
 
         link_ratio = link_ratio.reshape(len(self.scenario['isd_a']),-1).T
+        #print(NLOS)
+        df2=  pd.DataFrame(NLOS)
 
+        df2.to_csv(dir + 'link_ratio_ISD_height_' + str(uav_height) + '.txt', sep='\t', index=False)
+        #print (Connected)
+        df2 = pd.DataFrame(Connected)
+        df2.to_csv( dir + 'connected_aerialBS_' + str(uav_height) + '.txt' , sep = '\t', index =False)
         return data_all_dic, data_los, data_nlos, data_outage, link_ratio, connected_ar
 
     def plot_snr(self, uav_height = 30, save_dir = ' ', single_plot = False):
@@ -143,7 +160,7 @@ class snr_plot(object):
             #ax.title ('UAV height, 120 m')
             ax.xticks(fontsize = 13)
             ax.yticks(fontsize = 13)
-            ax.xlim (-10,60)
+            #ax.xlim (-10,55)
 
             ax.xlabel ('SNR (dB)', fontsize = 14)
             ax.ylabel ('CDF', fontsize =14)
@@ -267,7 +284,7 @@ if __name__ == "__main__":
     h = args.height
     ISD_t = args.isd_t
     s = snr_plot(scenario={'isd_t':200,'isd_a':[np.inf,800, 400,200], 'uav_heights':[30,60,120]},
-                    dir = '../data/', enabl_log=True, isd_t = ISD_t)
+                    dir = '../data/data_boston/', enabl_log=True, isd_t = ISD_t)
 
     s.single_plot_link_ratio(uav_h=h)
     s.plot_connected_aerial()

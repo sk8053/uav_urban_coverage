@@ -62,7 +62,7 @@ net.set_deploy_model(deployment_model)
 print ('UAV height: ', uav_height)
 print ("UAV number:", uav_number)
 # set cases that we want to know
-#scenarios = {'isd_t':400, 'isd_a':[800, 400]}
+
 scenarios = {'isd_t':200, 'isd_a':[800, 400, 200]}
 
 SNR_list=[]
@@ -77,6 +77,7 @@ for iteration in tqdm(range (max_iter), desc='# of iterations'):
 
 # save the SNR values for each case as pickle files
 ISD_t = scenarios['isd_t']
+#print (DATA_All)
 dir = '../data/'
 net.save_SNR_DATA(ISD_t, uav_height,DATA_All, dir)
 

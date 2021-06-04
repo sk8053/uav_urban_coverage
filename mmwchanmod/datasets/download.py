@@ -14,7 +14,7 @@ import pickle
 import numpy as np
 import zipfile
 import sys
-sys.path.append ('/home/sk8053/mmwchanmod2/mmwchanmod/')
+sys.path.append ('/home/sk8053/uavchanmod/')
 from  mmwchanmod.learn.models import ChanMod
 
 def download_file_from_gdrive(gdrive_id, destination):

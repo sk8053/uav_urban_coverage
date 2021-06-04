@@ -8,7 +8,7 @@ import tensorflow.keras.backend as K
 
 from tqdm import tqdm
 
-path = os.path.abspath('../..')
+path = os.path.abspath('../')
 if not path in sys.path:
     sys.path.append(path)
 
@@ -70,9 +70,9 @@ class Heat_Map(object):
         self.arr_ue = RotatedArray(arr_ue0, theta0=-90)
 
         # Construct and load the channel model object
-        print('Loading pre-trained model %s' % mod_name)
+        #print('Loading pre-trained model %s' % mod_name)
         K.clear_session()
-        self.chan_mod = load_model(mod_name)
+        self.chan_mod = load_model(mod_name, src = 'remote')
 
         # Get types of cell; terrestrial or aerial
         cell_types = self.chan_mod.rx_types
@@ -127,20 +127,10 @@ class Heat_Map(object):
         fig, ax = plt.subplots()
         if disable_plot is not True:
             rx_gain_matrix = np.flipud(rx_gain_matrix)
-            s = h_map.heatmap(rx_gain_matrix, cmap=cmap, xticklabels=np.round(x, 2),
+            s = h_map.heatmap(rx_gain_matrix, cmap=cmap, xticklabels=np.round(self.horizontal_axis_of_net, 2),
+                              yticklabels = np.flip(np.round(self.vertical_axis_of_net, 2)),
                             annot = annot, cbar = not annot)
-            tick_locator = ticker.MaxNLocator(10)
-            ax.xaxis.set_major_locator(tick_locator)
-            #s.locator_params(axis = 'x', nbins = len(x)/50)
-            #s.set_xticks (x[::50], ['-200','-150','-100', '-50','0','50','100','150','200'])
-            #s.set_yticklabels ( np.arange (0,150,50))
-            #s.set_xticks(x[::50])
-            #s.set_xticklabels ( np.arange(-200,200)[::50])
-            #s.xaxis.set_major_locator(ticker.MultipleLocator(50))
-            #s.xaxis.set_major_formatter(ticker.ScalarFormatter())
-            #ax.set_xaxis(xticklabels)
-            plt.xlabel("distance along "+ list(plane_type)[0]+ " axis (m)")
-            plt.ylabel("distance along "+ list(plane_type)[1]+ " axis (m)")
+
 
 
             if self.chan_mod.rx_types[self.cell_type[0]] == 'Terrestrial':
@@ -240,7 +230,7 @@ class Heat_Map(object):
         """
 
         npts = self.npts
-        dvec = -np.repeat([[dx, dy, dz]], npts, axis=0)
+        dvec = np.repeat([[dx, dy, dz]], npts, axis=0)
         arr_gnb_list = multi_sect_array( \
                 self.arr_gnb0, sect_type='azimuth', theta0=tilt_angle, nsect=self.nsect)
         cell_type_vec = np.repeat([self.cell_type], npts, axis=0)
@@ -254,32 +244,28 @@ class Heat_Map(object):
         for i in range(npts):
             # Generate random channels
             chan = chan_list[i]
-            data, aod_theta, aoa_theta, link_type = dir_path_loss_multi_sect( \
+            data = dir_path_loss_multi_sect( \
                 [self.arr_ue],arr_gnb_list,  chan)
-            pl_gain = data[2]
-            if link_type == 1 and data[7] !=0:
-                link_state[i] = 3
-            pl_gain_sum += 10 ** (-0.1 * (data[0]))
-            link_types = np.append(link_types, link_type)
+            pl_gain = data['pl_eff']
+            aod_theta = data['aod_theta']
+            aoa_theta = data['aoa_theta']
+
+            pl_gain_sum += 10 ** (-0.1 * (pl_gain))
+
             aod_thetas = np.append(aod_thetas, np.std(aod_theta))
             aoa_thetas = np.append(aoa_thetas, np.std(aoa_theta))
             # Compute the  SNR
             snri = self.tx_pow - pl_gain - self.kT - self.nf - 10 * np.log10(self.bw)
             snr[i] = snri
         pl_gain_sum /=npts
-        #if not np.isscalar(pl_gain_sum):
-        #    pl_gain_sum = pl_gain_sum[0]
 
         pl_gain_sum = 10*np.log10(pl_gain_sum)
 
         snr_avg = self.tx_pow - pl_gain_sum - self.kT - self.nf - 10 * np.log10(self.bw)
-        #snr_ = np.sort(snr)
 
+        aoa_theta_return = np.median(aoa_thetas)
 
-        aod_theta_return = np.median(aod_thetas)
-        link_type_return = link_types[np.where(aod_thetas==aod_theta_return)[0]]
-        #print (link_type_return)
-        return snr_avg, link_types[-1],data[1]#np.median(aoa_thetas)
+        return snr_avg, [1],aoa_theta_return#np.median(aoa_thetas)
 
     def get_association(self, annot = True, tilt_angel_t = -12, tilt_angle_a= 45,
                         bs_height_a =10, bs_height_t =0, plane_type = 'xy'):
