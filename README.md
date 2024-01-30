@@ -5,5 +5,6 @@ extensive system-level simulations are conducted using a generative channel mode
 It is found that standard downtilted base stations at street level, with typical microcellular densities, can indeed provide satisfactory UAV coverage. 
 Interestingly, this coverage is made possible by a conjunction of antenna sidelobes and strong reflections. With sparser deployments, the coverage is only guaranteed at progressively higher UAV altitudes. Additional base stations dedicated to UAV communication, rooftop-mounted and uptilted, would strengthen the coverage provided that their density is comparable to that of the standard deployment, and would be instrumental for sparse deployments of the latter.
 
-Seongjoon Kang, Marco Mezzavilla, Angel Lozano, Giovanni Geraci, William Xia, Sundeep Rangan, Vasilii Semkin, Giuseppe Loianno,  https://arxiv.org/abs/2104.04600
+*Seongjoon Kang, Marco Mezzavilla, Angel Lozano, Giovanni Geraci, William Xia, Sundeep Rangan, Vasilii Semkin, Giuseppe Loianno,  https://arxiv.org/abs/2104.04600
+
 This paper is published in [IEEE Globecomm 2021](https://globecom2021.ieee-globecom.org/)
